@@ -4,6 +4,7 @@ import {
   getAddress,
   getNetworkDetails,
   signTransaction,
+  WatchWalletChanges,
 } from '@stellar/freighter-api'
 import { NETWORK_PASSPHRASE } from './config'
 
@@ -49,6 +50,21 @@ export async function checkNetwork(): Promise<NetworkCheck> {
     network: d.network,
     passphrase: d.networkPassphrase,
   }
+}
+
+/**
+ * Polls Freighter for account or network switches (no prompt: same silent path as
+ * `currentAddress`). Fires once with the current values, then on every change.
+ * Returns a stop function.
+ */
+export function watchWallet(cb: (info: { address: string; passphrase: string }) => void, intervalMs = 1500): () => void {
+  const watcher = new WatchWalletChanges(intervalMs)
+  watcher.watch(({ address, networkPassphrase, error }) => {
+    // why: on extension errors the watcher fires with an empty address; ignore those ticks.
+    if (error || !address) return
+    cb({ address, passphrase: networkPassphrase })
+  })
+  return () => watcher.stop()
 }
 
 /** Sign a base64 tx XDR with Freighter. Returns the signed XDR. */

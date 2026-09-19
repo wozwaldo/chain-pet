@@ -23,7 +23,7 @@ Routes: `/?view=G...` shows any pet read-only (no wallet). `/?gallery` shows eve
 
 | Variable | Effect |
 |---|---|
-| `VITE_TIME_SCALE=60` | Demo clock: one real minute counts as one hour. On-chain data is untouched. |
+| `VITE_TIME_SCALE=60` | Demo clock: one real minute counts as one hour. On-chain data is untouched. Death is permanent and also scaled: at 60x a pet dies after 72 real minutes without care, so hatch a fresh pet after setting the scale and keep caring during the demo. |
 | `VITE_ANCHOR_MOCK=1` | Runs the Add funds flow against fake anchor responses. |
 
 ## Tests

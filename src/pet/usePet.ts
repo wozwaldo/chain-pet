@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { explainHorizonError } from '../stellar/tx'
 import { loadPendingClaimsFor, loadPetByAccount, type PendingClaim, type PetRelation } from './chain'
 import type { PetRecord } from './types'
 
@@ -13,8 +14,12 @@ interface Snapshot {
   claims: PendingClaim[]
 }
 
-/** Reads the connected account's pet and any pets in flight to it. */
-export function usePet(address: string | null) {
+/**
+ * Reads the connected account's pet and any pets in flight to it.
+ * Re-reads when the tab regains focus and on a slow poll, because chain state
+ * changes from other tabs and accounts (a claim, a treat, a cancelled transfer).
+ */
+export function usePet(address: string | null, pollMs = 30_000) {
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [failure, setFailure] = useState<{ address: string; message: string } | null>(null)
   const seq = useRef(0)
@@ -32,7 +37,7 @@ export function usePet(address: string | null) {
       },
       (err: unknown) => {
         if (my !== seq.current) return
-        setFailure({ address, message: err instanceof Error ? err.message : 'Could not read the pet from Horizon' })
+        setFailure({ address, message: explainHorizonError(err) })
       },
     )
   }, [address])
@@ -41,13 +46,32 @@ export function usePet(address: string | null) {
     reload().catch(() => {})
   }, [reload])
 
+  useEffect(() => {
+    if (!address) return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reload().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    const id = setInterval(onVisible, pollMs)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      clearInterval(id)
+    }
+  }, [address, reload, pollMs])
+
   // Snapshots are keyed by address so switching accounts never shows stale data.
   const current = snap && snap.address === address ? snap : null
+  const failed = failure && failure.address === address ? failure.message : null
   return {
     data: current?.data ?? null,
     claims: current?.claims ?? [],
     loaded: current !== null,
-    error: failure && failure.address === address ? failure.message : null,
+    /** The initial read failed: nothing to show. */
+    error: current === null ? failed : null,
+    /** A background refresh failed but the last good snapshot is still shown. */
+    staleError: current !== null ? failed : null,
     reload,
   }
 }

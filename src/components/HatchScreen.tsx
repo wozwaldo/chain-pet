@@ -8,11 +8,24 @@ import { inputClass } from './form'
 
 const SPECIES_LABEL: Record<Species, string> = { blob: 'Blob', cat: 'Cat', dragon: 'Dragon' }
 
-export function HatchScreen({ address, sign, onHatched }: { address: string; sign: Signer; onHatched: () => Promise<void> }) {
+export function HatchScreen({
+  address,
+  sign,
+  onHatched,
+  pendingClaims = 0,
+}: {
+  address: string
+  sign: Signer
+  onHatched: () => Promise<void>
+  /** Pets in flight to this account. Hatching makes them unclaimable, so warn first. */
+  pendingClaims?: number
+}) {
   const [name, setName] = useState('')
   const [species, setSpecies] = useState<Species>('blob')
+  const [ack, setAck] = useState(false)
   const action = useAction(onHatched)
   const valid = name.trim().length >= 1 && name.trim().length <= 24
+  const blockedByClaim = pendingClaims > 0 && !ack
 
   return (
     <Card className="mx-auto max-w-md">
@@ -47,12 +60,21 @@ export function HatchScreen({ address, sign, onHatched }: { address: string; sig
           />
         </Field>
       </div>
+      {pendingClaims > 0 && (
+        <div className="mt-4 rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm">
+          <p>⚠️ A pet is waiting for you above. If you hatch your own, you will not be able to claim it.</p>
+          <label className="mt-1 flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={action.busy} />I want a new pet anyway
+          </label>
+        </div>
+      )}
       <div className="mt-4 flex items-center gap-3">
-        <Button disabled={!valid || action.busy} onClick={() => action.run(() => submitOps(address, hatchOps(name.trim(), species), sign))}>
-          {action.busy ? 'Waiting for Freighter…' : 'Hatch on Stellar'}
+        <Button disabled={!valid || blockedByClaim || action.anyBusy} onClick={() => action.run(() => submitOps(address, hatchOps(name.trim(), species), sign))}>
+          {action.busy ? 'Signing & confirming…' : 'Hatch on Stellar'}
         </Button>
         {action.lastHash && <TxLink hash={action.lastHash} />}
       </div>
+      {action.busy && <p className="mt-2 text-sm text-stone-500">Sign in Freighter, then Horizon confirms in a few seconds…</p>}
       <div className="mt-3">
         <Why>Two manageData ops write pet.name and pet.species to your account. Costs only the network fee.</Why>
       </div>

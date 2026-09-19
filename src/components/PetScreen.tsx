@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { deriveState, describeDuration, timeUntil } from '../pet/engine'
+import { deriveState, describeDuration, THRESHOLDS, timeUntil } from '../pet/engine'
 import type { PetData } from '../pet/usePet'
 import { CARE_KINDS, type CareKind } from '../pet/types'
 import { TIME_SCALE } from '../stellar/config'
@@ -23,6 +23,7 @@ export function PetScreen({
   sign,
   reload,
   readOnly = false,
+  canSign = true,
 }: {
   address: string
   data: PetData
@@ -31,6 +32,8 @@ export function PetScreen({
   reload: () => Promise<void>
   /** Viewing someone else's pet: no actions, no "you hatched" banner. */
   readOnly?: boolean
+  /** false while Freighter is on the wrong network: everything visible, nothing signable. */
+  canSign?: boolean
 }) {
   const { record, relation } = data
   const [tab, setTab] = useState<Tab>(readOnly ? 'history' : 'care')
@@ -38,7 +41,10 @@ export function PetScreen({
   const state = deriveState(record, now, TIME_SCALE)
   const until = timeUntil(record, now, TIME_SCALE)
   const isOwner = !readOnly && relation === 'owner'
-  const canCare = isOwner && state.alive
+  const canCare = isOwner && state.alive && canSign
+  // Shout before the point of no return: death is permanent. Scale-aware (18 real min at x60, 18h at x1).
+  const deathWarnMs = (THRESHOLDS.DEATH_AFTER / TIME_SCALE) * 0.25
+  const nearDeath = state.alive && until.diesIn !== null && until.diesIn < deathWarnMs
 
   const anim = !state.alive ? 'sprite-anim-sway' : state.mood === 'ecstatic' ? 'sprite-anim-wobble' : state.mood === 'sad' || state.mood === 'miserable' ? 'sprite-anim-droop' : 'sprite-anim-bob'
 
@@ -82,8 +88,13 @@ export function PetScreen({
             )}
             {state.alive ? (
               <p className="text-xs text-stone-500">
-                Starves in {describeDuration(until.starvesIn)}
-                {until.diesIn !== null && <> · dies if ignored for {describeDuration(until.diesIn)}</>}
+                {until.starvesIn === 0 ? 'Starving' : <>Starves in {describeDuration(until.starvesIn)}</>}
+                {until.diesIn !== null && !nearDeath && <> · dies if ignored for {describeDuration(until.diesIn)}</>}
+                {nearDeath && until.diesIn !== null && (
+                  <span className="ml-1 inline-block rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">
+                    Dies for good in {describeDuration(until.diesIn)} — any care resets this
+                  </span>
+                )}
               </p>
             ) : (
               <p className="text-sm font-semibold text-stone-700">
@@ -97,7 +108,7 @@ export function PetScreen({
       <Card>
         <div className="mb-3 flex flex-wrap gap-2">
           {(readOnly ? (['history'] as Tab[]) : (['care', 'history', 'transfer', 'gift'] as Tab[])).map((t) => (
-            <Button key={t} tone={tab === t ? 'secondary' : 'ghost'} onClick={() => setTab(t)} className="capitalize">
+            <Button key={t} tone={tab === t ? 'secondary' : 'ghost'} disabled={action.anyBusy} onClick={() => setTab(t)} className="capitalize">
               {t}
             </Button>
           ))}
@@ -106,7 +117,12 @@ export function PetScreen({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {CARE_KINDS.map((k) => (
-                <Button key={k} disabled={!canCare || action.busy} onClick={() => action.run(() => submitOps(address, [careOp(k)], sign))}>
+                <Button
+                  key={k}
+                  disabled={!canCare || action.anyBusy}
+                  className={nearDeath && canCare ? 'animate-pulse' : ''}
+                  onClick={() => action.run(() => submitOps(address, [careOp(k)], sign))}
+                >
                   {CARE_LABEL[k]}
                 </Button>
               ))}
@@ -115,17 +131,18 @@ export function PetScreen({
             {action.busy && <p className="text-sm text-stone-500">Sign in Freighter, then Horizon confirms in a few seconds…</p>}
             <Why>Each action is one manageData op (key pet.care). Free apart from the network fee; the ledger timestamp is what the pet feels.</Why>
             {!isOwner && <p className="text-sm text-stone-500">Only the current owner can care for this pet.</p>}
+            {isOwner && !canSign && <p className="text-sm text-stone-500">Switch Freighter to TESTNET to care for this pet.</p>}
             <ErrorBox message={action.error} />
           </div>
         )}
         {tab === 'history' && <HistoryPanel record={record} now={now} />}
         {tab === 'transfer' &&
           (isOwner ? (
-            <TransferPanel address={address} record={record} now={now} sign={sign} reload={reload} />
+            <TransferPanel address={address} record={record} now={now} sign={sign} reload={reload} canSign={canSign} />
           ) : (
             <p className="text-sm text-stone-500">Only the current owner can transfer this pet.</p>
           ))}
-        {tab === 'gift' && <GiftPanel address={address} now={now} sign={sign} reload={reload} />}
+        {tab === 'gift' && <GiftPanel address={address} now={now} sign={sign} reload={reload} canSign={canSign} />}
       </Card>
     </div>
   )

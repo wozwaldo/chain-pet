@@ -39,9 +39,18 @@ export function Why({ children }: { children: ReactNode }) {
   return <p className="text-xs text-stone-500">💡 {children}</p>
 }
 
-export function ErrorBox({ message }: { message: string | null }) {
+export function ErrorBox({ message, onRetry }: { message: string | null; onRetry?: () => void }) {
   if (!message) return null
-  return <p className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">{message}</p>
+  return (
+    <p className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      {message}
+      {onRetry && (
+        <button type="button" className="ml-2 font-semibold underline" onClick={onRetry}>
+          Retry
+        </button>
+      )}
+    </p>
+  )
 }
 
 export function TxLink({ hash, label = 'View transaction' }: { hash: string; label?: string }) {

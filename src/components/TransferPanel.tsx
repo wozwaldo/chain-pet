@@ -19,12 +19,15 @@ export function TransferPanel({
   now,
   sign,
   reload,
+  canSign = true,
 }: {
   address: string
   record: PetRecord
   now: number
   sign: Signer
   reload: () => Promise<void>
+  /** false while Freighter is on the wrong network. */
+  canSign?: boolean
 }) {
   const [mode, setMode] = useState<'rehome' | 'heir'>('rehome')
   const [to, setTo] = useState('')
@@ -49,8 +52,12 @@ export function TransferPanel({
           . You keep caring for it until they claim.
         </p>
         <div className="flex items-center gap-3">
-          <Button tone="danger" disabled={action.busy || pending.sponsor !== address} onClick={() => action.run(() => submitOps(address, [cancelTransferOp(pending.balanceId)], sign))}>
-            {action.busy ? 'Waiting for Freighter…' : 'Cancel transfer'}
+          <Button
+            tone="danger"
+            disabled={action.anyBusy || !canSign || pending.sponsor !== address}
+            onClick={() => action.run(() => submitOps(address, [cancelTransferOp(pending.balanceId)], sign))}
+          >
+            {action.busy ? 'Signing & confirming…' : 'Cancel transfer'}
           </Button>
           {action.lastHash && <TxLink hash={action.lastHash} />}
         </div>
@@ -84,7 +91,7 @@ export function TransferPanel({
       )}
       <div className="flex items-center gap-3">
         <Button
-          disabled={!validTo || !validWhen || action.busy}
+          disabled={!validTo || !validWhen || action.anyBusy || !canSign}
           onClick={() =>
             action.run(() =>
               submitOps(
@@ -95,14 +102,14 @@ export function TransferPanel({
             )
           }
         >
-          {action.busy ? 'Waiting for Freighter…' : mode === 'heir' ? 'Name heir' : 'Send pet'}
+          {action.busy ? 'Signing & confirming…' : mode === 'heir' ? 'Name heir' : 'Send pet'}
         </Button>
         {action.lastHash && <TxLink hash={action.lastHash} />}
       </div>
       <Why>
         {mode === 'heir'
           ? 'createClaimableBalance with a "not before" predicate: the heir cannot claim early, and you can cancel any time.'
-          : 'createClaimableBalance of the 1 PET1 token. The pet leaves your account only when they claim it.'}
+          : 'createClaimableBalance moves the 1 PET1 token out of your account into a claimable balance on the ledger. You stay a claimant, so you can take it back any time until they claim it, and Chain Pet still counts you as the owner meanwhile.'}
       </Why>
       <ErrorBox message={action.error} />
     </div>

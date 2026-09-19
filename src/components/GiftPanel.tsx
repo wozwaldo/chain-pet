@@ -3,18 +3,34 @@ import { loadPetByAccount } from '../pet/chain'
 import { deriveState } from '../pet/engine'
 import { TREAT_KINDS, type PetRecord, type TreatKind } from '../pet/types'
 import { TIME_SCALE } from '../stellar/config'
-import { giftMemo, giftOp, MAX_GIFT_XLM, MIN_GIFT_XLM, submitOps, type Signer } from '../stellar/tx'
+import { explainHorizonError, giftMemo, giftOp, MAX_GIFT_XLM, MIN_GIFT_XLM, submitOps, type Signer } from '../stellar/tx'
 import { PetSprite } from './PetSprite'
 import { TreatIcon } from './TreatIcon'
 import { useAction } from './useAction'
 import { AccountLink, Button, ErrorBox, Field, TxLink, Why } from './ui'
 import { inputClass, isPublicKey } from './form'
 
-export function GiftPanel({ address, now, sign, reload }: { address: string; now: number; sign: Signer; reload: () => Promise<void> }) {
+export function GiftPanel({
+  address,
+  now,
+  sign,
+  reload,
+  canSign = true,
+}: {
+  address: string
+  now: number
+  sign: Signer
+  reload: () => Promise<void>
+  /** false while Freighter is on the wrong network. */
+  canSign?: boolean
+}) {
   const [to, setTo] = useState('')
   const [kind, setKind] = useState<TreatKind>('apple')
   const [amount, setAmount] = useState('0.5')
-  const [lookup, setLookup] = useState<{ address: string; record: PetRecord | null } | null>(null)
+  // why: a Horizon error must not look like "no pet here": that would silently redirect the
+  // payment to the pasted (maybe birth) address instead of the pet's current owner.
+  const [lookup, setLookup] = useState<{ address: string; record: PetRecord | null; error?: string } | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const action = useAction(reload)
 
   const validTo = isPublicKey(to) && to !== address
@@ -25,13 +41,18 @@ export function GiftPanel({ address, now, sign, reload }: { address: string; now
       .then((r) => {
         if (!cancelled) setLookup({ address: to, record: r ? r.record : null })
       })
-      .catch(() => {
-        if (!cancelled) setLookup({ address: to, record: null })
+      .catch((err: unknown) => {
+        if (!cancelled) setLookup({ address: to, record: null, error: explainHorizonError(err) })
       })
     return () => {
       cancelled = true
     }
-  }, [to, validTo])
+  }, [to, validTo, attempt])
+
+  const retry = () => {
+    setLookup(null)
+    setAttempt((n) => n + 1)
+  }
 
   const target = validTo && lookup && lookup.address === to ? lookup : null
   const looking = validTo && target === null
@@ -39,6 +60,8 @@ export function GiftPanel({ address, now, sign, reload }: { address: string; now
   const amt = Number(amount)
   const validAmount = Number.isFinite(amt) && amt >= Number(MIN_GIFT_XLM) && amt <= Number(MAX_GIFT_XLM)
   const dest = target?.record ? target.record.owner : to
+  // why: the pasted key may be a pet's birth address whose current owner is this account.
+  const selfTarget = dest === address
   const preview = target?.record ? deriveState(target.record, now, TIME_SCALE) : null
 
   return (
@@ -49,14 +72,30 @@ export function GiftPanel({ address, now, sign, reload }: { address: string; now
       {validTo && (
         <div className="flex items-center gap-3 rounded-xl border-2 border-dashed border-stone-300 p-2 text-sm">
           {looking && <span className="text-stone-500">Looking up their pet…</span>}
-          {target && !target.record && <span className="text-stone-500">No Chain Pet found at that address. The treat would still be a plain payment.</span>}
+          {target?.error && (
+            <span className="text-red-700">
+              Could not look up that address ({target.error}).{' '}
+              <button type="button" className="underline" onClick={retry}>
+                Retry
+              </button>
+            </span>
+          )}
+          {target && !target.record && !target.error && (
+            <span className="text-stone-500">No Chain Pet found at that address. The treat would still be a plain payment.</span>
+          )}
           {preview && target?.record && (
             <>
               <PetSprite species={target.record.species} stage={preview.stage} mood={preview.mood} alive={preview.alive} size={3} />
               <div>
                 <div className="font-bold">{target.record.name}</div>
                 <div className="text-xs text-stone-500">
-                  {preview.statusLine} · lives with <AccountLink address={target.record.owner} />
+                  {selfTarget ? (
+                    'That is your own pet — send treats to a friend.'
+                  ) : (
+                    <>
+                      {preview.statusLine} · lives with <AccountLink address={target.record.owner} />
+                    </>
+                  )}
                 </div>
               </div>
             </>
@@ -86,10 +125,10 @@ export function GiftPanel({ address, now, sign, reload }: { address: string; now
       </Field>
       <div className="flex items-center gap-3">
         <Button
-          disabled={!validTo || !validAmount || action.busy || looking}
+          disabled={!validTo || !validAmount || selfTarget || action.anyBusy || looking || !!target?.error || !canSign}
           onClick={() => action.run(() => submitOps(address, [giftOp(dest, amt.toFixed(7))], sign, { memo: giftMemo(kind) }))}
         >
-          {action.busy ? 'Waiting for Freighter…' : 'Send treat'}
+          {action.busy ? 'Signing & confirming…' : 'Send treat'}
         </Button>
         {action.lastHash && <TxLink hash={action.lastHash} />}
       </div>

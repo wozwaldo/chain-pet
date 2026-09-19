@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { checkNetwork, connectWallet, currentAddress, type NetworkCheck } from './freighter'
+import { checkNetwork, connectWallet, currentAddress, FreighterError, watchWallet, type NetworkCheck } from './freighter'
 import { fundWithFriendbot, loadAccountOrNull, xlmBalance } from './horizon'
 
 export interface WalletState {
@@ -31,6 +31,16 @@ export function useWallet() {
       funded: account !== null,
       balance: account ? xlmBalance(account) : null,
     }))
+  }, [])
+
+  /**
+   * Live check at sign time. why: Freighter can be switched mid-session; re-read the
+   * network right before signing and refresh the banner state as a side effect.
+   */
+  const requireTestnet = useCallback(async () => {
+    const network = await checkNetwork()
+    setState((s) => ({ ...s, network }))
+    if (!network.ok) throw new FreighterError(`Freighter is on ${network.network}. Switch it to TESTNET and try again.`)
   }, [])
 
   const connect = useCallback(async () => {
@@ -69,5 +79,19 @@ export function useWallet() {
     }
   }, [refresh])
 
-  return { ...state, connect, fund, refresh }
+  // Follow account/network switches made inside Freighter once an address is known.
+  // why: the app otherwise keeps building txs for the previous account, and the
+  // wrong-network banner would never clear after the user switches back.
+  const curAddress = state.address
+  const curPassphrase = state.network?.passphrase ?? null
+  useEffect(() => {
+    if (!curAddress) return
+    return watchWallet(({ address, passphrase }) => {
+      const addressChanged = address !== curAddress
+      const networkChanged = curPassphrase !== null && passphrase !== curPassphrase
+      if (addressChanged || networkChanged) refresh(address).catch(() => {})
+    })
+  }, [curAddress, curPassphrase, refresh])
+
+  return { ...state, connect, fund, refresh, requireTestnet }
 }
