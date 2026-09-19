@@ -3,6 +3,7 @@ import { deriveState, describeDuration, THRESHOLDS, timeUntil } from '../pet/eng
 import type { PetData } from '../pet/usePet'
 import { CARE_KINDS, type CareKind } from '../pet/types'
 import { TIME_SCALE } from '../stellar/config'
+import { useDocumentBadge } from '../pet/useDocumentBadge'
 import { careOp, submitOps, type Signer } from '../stellar/tx'
 import { GiftPanel } from './GiftPanel'
 import { HistoryPanel } from './HistoryPanel'
@@ -40,6 +41,7 @@ export function PetScreen({
   const action = useAction(reload)
   const state = deriveState(record, now, TIME_SCALE)
   const until = timeUntil(record, now, TIME_SCALE)
+  useDocumentBadge(record, state)
   const isOwner = !readOnly && relation === 'owner'
   const canCare = isOwner && state.alive && canSign
   // Shout before the point of no return: death is permanent. Scale-aware (18 real min at x60, 18h at x1).

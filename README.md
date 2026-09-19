@@ -19,6 +19,8 @@ Connect Freighter on **Testnet**. Unfunded accounts get a Friendbot button.
 
 Routes: `/?view=G...` shows any pet read-only (no wallet). `/?gallery` shows every sprite.
 
+The app is installable as a PWA (manifest + no-cache service worker in production builds). The tab title and favicon change with the pet's mood. Regenerate icons after editing sprites: `MAKE_ICONS=1 pnpm exec vitest run src/dev/makeIcons.test.ts`.
+
 ## Env (`.env.local`)
 
 | Variable | Effect |
