@@ -1,8 +1,10 @@
 // "Add funds" button + self-contained stepper modal for a SEP-24 deposit.
 // App renders <AddFundsButton address={...} sign={...} /> and nothing else
-// needs to know about anchors. Tailwind only.
+// needs to know about anchors. Cozy Garden primitives + Tailwind only.
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { Button, Card, Chip, ErrorBox } from '../components/ui'
 import type { Signer } from '../stellar/tx'
 import {
   DEFAULT_ASSET_CODE,
@@ -74,7 +76,18 @@ function openAnchorWindow(url: string): Window | null {
   return w
 }
 
-export function AddFundsButton({ address, sign, onDone }: { address: string; sign: Signer; onDone?: () => void }) {
+export function AddFundsButton({
+  address,
+  sign,
+  onDone,
+  disabled = false,
+}: {
+  address: string
+  sign: Signer
+  onDone?: () => void
+  /** Keeps the trigger closed while another tx holds the account's sequence number. */
+  disabled?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [flow, setFlow] = useState<FlowState>(INITIAL)
   const abortRef = useRef<AbortController | null>(null)
@@ -83,6 +96,9 @@ export function AddFundsButton({ address, sign, onDone }: { address: string; sig
   useEffect(() => {
     onDoneRef.current = onDone
   }, [onDone])
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  /** Whatever had focus when the dialog opened (the trigger); focus goes back there on close. */
+  const returnFocusRef = useRef<HTMLElement | null>(null)
 
   const patch = useCallback((p: Partial<FlowState>) => setFlow((s) => ({ ...s, ...p })), [])
 
@@ -157,6 +173,7 @@ export function AddFundsButton({ address, sign, onDone }: { address: string; sig
   )
 
   const begin = useCallback(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setFlow(INITIAL)
     setOpen(true)
     void runAuto('auth', INITIAL)
@@ -222,111 +239,121 @@ export function AddFundsButton({ address, sign, onDone }: { address: string; sig
     return () => window.removeEventListener('keydown', onKey)
   }, [open, close])
 
+  // Modal focus: the page behind (#root) is inert while open (the overlay is portaled to body, so it
+  // stays live), focus moves onto the dialog, and on close it returns to the trigger only after inert
+  // is lifted, because an inert element cannot take focus.
+  useEffect(() => {
+    if (!open) return
+    const root = document.getElementById('root')
+    root?.setAttribute('inert', '')
+    return () => {
+      root?.removeAttribute('inert')
+      returnFocusRef.current?.focus()
+      returnFocusRef.current = null
+    }
+  }, [open])
+  useEffect(() => {
+    if (open) dialogRef.current?.focus()
+  }, [open])
+
+  // Tab / Shift+Tab wrap inside the dialog.
+  const trapTab = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab' || !dialogRef.current) return
+    const nodes = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')
+    if (nodes.length === 0) return
+    const first = nodes[0]
+    const last = nodes[nodes.length - 1]
+    const active = document.activeElement
+    if (e.shiftKey && (active === first || active === dialogRef.current)) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
   return (
     <>
-      <button
-        type="button"
-        onClick={begin}
-        className="rounded-full border-2 border-emerald-300 bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500 hover:text-white"
-      >
+      <Button tone="amber" onClick={begin} disabled={disabled} title="Deposit via the SEP-24 test anchor">
         + Add funds
-      </button>
+      </Button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) close()
-          }}
-        >
+      {open &&
+        createPortal(
           <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="addfunds-title"
-            className="w-full max-w-md rounded-2xl bg-white p-5 text-stone-800 shadow-2xl"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) close()
+            }}
           >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 id="addfunds-title" className="text-lg font-black tracking-tight">
-                  Add funds via anchor
-                </h2>
-                <p className="text-xs text-stone-500">
-                  testanchor.stellar.org · {DEFAULT_ASSET_CODE} deposit · testnet
-                  {isMockMode() && <span className="ml-1 rounded bg-amber-200 px-1 font-semibold text-amber-800">MOCK</span>}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={close}
-                aria-label="Close"
-                className="rounded-full px-2 text-xl leading-none text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-              >
-                ×
-              </button>
-            </div>
+            <div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="addfunds-title"
+              tabIndex={-1}
+              onKeyDown={trapTab}
+              className="w-full max-w-md outline-none"
+            >
+              <Card className="shadow-screen">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 id="addfunds-title" className="text-base font-extrabold text-ink">
+                      Add funds via anchor
+                    </h2>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+                      <span className="font-mono">testanchor.stellar.org</span>
+                      <span>· {DEFAULT_ASSET_CODE} deposit · testnet</span>
+                      {isMockMode() && <Chip tone="amber">mock</Chip>}
+                    </p>
+                  </div>
+                  <Button tone="ghost" size="sm" onClick={close} aria-label="Close" className="-mr-2 -mt-1 px-2.5! text-lg leading-none">
+                    ×
+                  </Button>
+                </div>
 
-            <ol className="space-y-3">
-              {STEPS.map((s, i) => (
-                <StepRow key={s.id} index={i} step={s} flow={flow} />
-              ))}
-            </ol>
+                <ol className="space-y-3">
+                  {STEPS.map((s, i) => (
+                    <StepRow key={s.id} index={i} step={s} flow={flow} />
+                  ))}
+                </ol>
 
-            {flow.error && (
-              <div className="mt-4 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">
-                <p className="break-words">{flow.error}</p>
-                <button
-                  type="button"
-                  onClick={retry}
-                  className="mt-2 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
+                <ErrorBox className="mt-4" message={flow.error} onRetry={retry} />
 
-            <div className="mt-5 flex items-center justify-end gap-2">
-              {flow.step === 'open' && !flow.error && (
-                <>
-                  {flow.popupBlocked && flow.deposit && (
-                    <a
-                      href={flow.deposit.url}
-                      target="sep24"
-                      rel="noreferrer"
-                      className="text-xs text-pink-600 underline"
-                      onClick={openAnchorViaLink}
-                    >
-                      Popup blocked? Click here
-                    </a>
+                <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+                  {flow.step === 'open' && !flow.error && (
+                    <>
+                      {flow.popupBlocked && flow.deposit && (
+                        <a
+                          href={flow.deposit.url}
+                          target="sep24"
+                          rel="noreferrer"
+                          className="text-xs font-semibold text-link underline"
+                          onClick={openAnchorViaLink}
+                        >
+                          Popup blocked? Click here
+                        </a>
+                      )}
+                      <Button size="sm" onClick={openAnchor}>
+                        Open anchor window
+                      </Button>
+                    </>
                   )}
-                  <button
-                    type="button"
-                    onClick={openAnchor}
-                    className="rounded-full bg-pink-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-pink-600"
-                  >
-                    Open anchor window
-                  </button>
-                </>
-              )}
-              {flow.step === 'wait' && flow.deposit && (
-                <button
-                  type="button"
-                  onClick={() => openAnchorWindow(flow.deposit!.url)}
-                  className="rounded-full border border-stone-300 px-3 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-100"
-                >
-                  Reopen anchor window
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={close}
-                className="rounded-full px-4 py-1.5 text-sm font-semibold text-stone-500 hover:bg-stone-100"
-              >
-                {flow.step === 'done' ? 'Close' : 'Cancel'}
-              </button>
+                  {flow.step === 'wait' && flow.deposit && (
+                    <Button tone="secondary" size="sm" onClick={() => openAnchorWindow(flow.deposit!.url)}>
+                      Reopen anchor window
+                    </Button>
+                  )}
+                  <Button tone="ghost" size="sm" onClick={close}>
+                    {flow.step === 'done' ? 'Close' : 'Cancel'}
+                  </Button>
+                </div>
+              </Card>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   )
 }
@@ -343,34 +370,29 @@ function StepRow({ index, step, flow }: { index: number; step: (typeof STEPS)[nu
   const failed = isCurrent && !!flow.error
   const spinning = isCurrent && flow.busy && !failed
 
-  const badge = isDone
-    ? 'bg-emerald-500 text-white'
-    : failed
-      ? 'bg-red-500 text-white'
-      : isCurrent
-        ? 'bg-pink-500 text-white'
-        : 'bg-stone-200 text-stone-500'
+  const badge = isDone ? 'bg-primary text-white' : failed ? 'bg-alert text-white' : isCurrent ? 'bg-tab-active text-white' : 'bg-tabs text-muted-2'
 
   return (
     <li className={`flex gap-3 ${!isDone && !isCurrent ? 'opacity-50' : ''}`}>
       <span
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${badge}`}
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold ${badge}`}
         aria-hidden="true"
       >
         {isDone ? '✓' : failed ? '!' : index + 1}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">{step.title}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[13px] font-bold text-ink">{step.title}</span>
           {spinning && (
             <span
-              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-pink-300 border-t-pink-600"
+              role="img"
+              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-info-border border-t-primary"
               aria-label="working"
             />
           )}
           <StepDetail step={step.id} flow={flow} />
         </div>
-        <p className="text-xs text-stone-500">{step.why}</p>
+        <p className="text-xs leading-normal text-muted">{step.why}</p>
       </div>
     </li>
   )
@@ -379,21 +401,21 @@ function StepRow({ index, step, flow }: { index: number; step: (typeof STEPS)[nu
 /** Small live detail per step: trustline result, deposit status, final amount. */
 function StepDetail({ step, flow }: { step: StepId; flow: FlowState }) {
   if (step === 'trust' && flow.trust) {
-    return <span className="text-xs text-stone-500">({flow.trust === 'created' ? 'created' : 'already there'})</span>
+    return <span className="text-xs text-muted">({flow.trust === 'created' ? 'created' : 'already there'})</span>
   }
   if (step === 'wait' && flow.tx && !isTerminal(flow.tx.status)) {
     return (
-      <span className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[11px] text-amber-800">
+      <Chip tone="amber" className="font-mono">
         {flow.tx.status.replace(/_/g, ' ')}
-      </span>
+      </Chip>
     )
   }
   if (step === 'done' && flow.step === 'done' && flow.tx) {
     const amt = flow.tx.amount_out ?? flow.tx.amount_in
     return (
-      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-semibold text-emerald-800">
+      <Chip tone="green" className="font-mono">
         +{amt ?? '?'} {DEFAULT_ASSET_CODE}
-      </span>
+      </Chip>
     )
   }
   return null

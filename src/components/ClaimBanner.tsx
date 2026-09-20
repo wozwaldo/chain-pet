@@ -1,9 +1,12 @@
+// "A pet is waiting for you": pending claimable balances of PET1 naming this
+// account. Claim = trust + claim + pet.prev in one tx (claimOps).
+import { PixelIcon } from '../art/PixelIcon'
 import type { PendingClaim } from '../pet/chain'
 import { describeDuration } from '../pet/engine'
 import type { PetData } from '../pet/usePet'
 import { claimOps, submitOps, type Signer } from '../stellar/tx'
 import { useAction } from './useAction'
-import { AccountLink, Button, Card, ErrorBox, TxLink, Why } from './ui'
+import { AccountLink, Button, Card, ErrorBox, SectionTitle, TxLink, Why } from './ui'
 
 export function ClaimBanner({
   address,
@@ -34,39 +37,42 @@ export function ClaimBanner({
       ? 'This account already has a pet; transfer it first.'
       : 'This account hatched a pet that lives elsewhere, so it cannot adopt another.'
   return (
-    <Card className="border-sky-700 bg-sky-50">
-      <h2 className="text-base font-black">🎁 A pet is waiting for you</h2>
-      <ul className="mt-2 space-y-2">
+    <Card tone="info">
+      <SectionTitle className="mb-2" icon={<PixelIcon name="heart" px={16} />}>
+        A pet is waiting for you
+      </SectionTitle>
+      <ul className="space-y-2">
         {claims.map((c) => {
           const after = c.transfer.claimableAfter
           const locked = after !== undefined && after > now
           return (
-            <li key={c.transfer.balanceId} className="flex flex-wrap items-center gap-3 text-sm">
-              <span>
+            <li key={c.transfer.balanceId} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] leading-normal">
+              <span className="min-w-0 flex-1">
                 From <AccountLink address={c.transfer.sponsor} /> (pet born on <AccountLink address={c.issuer} />)
-                {locked && <span className="ml-1 text-stone-500">· unlocks in {describeDuration(after - now)}</span>}
+                {locked && <span className="text-muted"> · unlocks in {describeDuration(after - now)}</span>}
               </span>
               {canClaim(c) ? (
                 <Button
+                  size="sm"
                   disabled={locked || action.anyBusy || !canSign}
                   onClick={() => action.run(() => submitOps(address, claimOps(c.issuer, address, c.transfer.balanceId, c.transfer.sponsor), sign))}
                 >
                   {action.busy ? 'Signing & confirming…' : locked ? 'Locked' : 'Claim'}
                 </Button>
               ) : (
-                <span className="text-xs text-stone-500">{blockedNote}</span>
+                <span className="text-xs text-muted">{blockedNote}</span>
               )}
             </li>
           )
         })}
       </ul>
-      <div className="mt-2 flex items-center gap-3">
-        {action.lastHash && <TxLink hash={action.lastHash} />}
-      </div>
-      <div className="mt-2">
-        <Why>One tx: trust the PET1 asset, claim the balance, and record pet.prev so the lineage stays linked.</Why>
-      </div>
-      <ErrorBox message={action.error} />
+      {action.lastHash && (
+        <div className="mt-2">
+          <TxLink hash={action.lastHash} />
+        </div>
+      )}
+      <Why className="mt-2">One tx: trust the PET1 asset, claim the balance, and record pet.prev so the lineage stays linked.</Why>
+      <ErrorBox className="mt-2" message={action.error} />
     </Card>
   )
 }

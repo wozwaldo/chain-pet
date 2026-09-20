@@ -22,7 +22,7 @@ function pet(overrides: Partial<PetRecord> = {}): PetRecord {
     id: 'PET1:GISSUER',
     issuer: 'GISSUER',
     name: 'Blobby',
-    species: 'blob',
+    species: 'plain',
     bornAt: BORN,
     owner: 'GISSUER',
     lineage: ['GISSUER'],

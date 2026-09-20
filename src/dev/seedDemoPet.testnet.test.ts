@@ -40,7 +40,7 @@ describe.skipIf(!env.SEED_DEMO)('seed demo pet', () => {
     const signO = keypairSigner(owner)
     const signF = keypairSigner(friend)
 
-    await submitOps(owner.publicKey(), hatchOps(env.SEED_NAME ?? 'Mochi', 'cat'), signO)
+    await submitOps(owner.publicKey(), hatchOps(env.SEED_NAME ?? 'Mochi', 'tanuki'), signO)
     await submitOps(owner.publicKey(), [careOp('feed')], signO)
     await submitOps(owner.publicKey(), [careOp('play')], signO)
     await submitOps(owner.publicKey(), [careOp('clean')], signO)

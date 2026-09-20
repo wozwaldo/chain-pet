@@ -126,7 +126,7 @@ Deciding what "on-chain identity" means for a pet. The token-as-identity plus ca
 - Lineage via a single overwritable pointer; cycles truncate.
 - Inheritance is time-locked, not inactivity-triggered.
 - Freighter is a desktop extension; the demo is on desktop.
-- Sprites are generated placeholders; the developer is a 2D artist and will replace them.
+- Stage evolution is shown by size (baby 70%, teen 85%, adult 100%); the cast art has one body per character.
 
 ## Roadmap ideas (only if asked)
 
@@ -138,4 +138,4 @@ Deciding what "on-chain identity" means for a pet. The token-as-identity plus ca
 
 ## Stack facts
 
-Vite + React 19 + TypeScript + Tailwind v4, pnpm. `@stellar/stellar-sdk` 17, `@stellar/freighter-api` 6, plain fetch for SEP-24. Vitest. No backend. Installable as a PWA. The tab title and favicon reflect the pet's mood.
+Vite + React 19 + TypeScript + Tailwind v4, pnpm. `@stellar/stellar-sdk` 17, `@stellar/freighter-api` 6, plain fetch for SEP-24. Vitest. No backend. Installable as a PWA. The tab title and favicon reflect the pet's mood. UI: Cozy Garden design (sage, khaki, terracotta) with the pet inside a handheld device with a meadow LCD; nine purchased pixel characters.

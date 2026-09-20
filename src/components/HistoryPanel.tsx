@@ -1,77 +1,107 @@
+// Life log in the Cozy Garden style (design 6a History tab): one dashed row
+// per on-chain operation (care, treat, birth), newest first; the ownership
+// chain is a muted footnote line, shown only once the pet has changed hands.
+import { Fragment, type ReactNode } from 'react'
+import { PixelIcon } from '../art/PixelIcon'
 import { describeDuration } from '../pet/engine'
-import type { PetRecord } from '../pet/types'
+import type { CareKind, PetRecord } from '../pet/types'
 import { TreatIcon } from './TreatIcon'
-import { AccountLink, TxLink, Why } from './ui'
+import { AccountLink, TxLink } from './ui'
 
-const CARE_ICON: Record<string, string> = { feed: '🍙', play: '🎾', clean: '🫧' }
+const CARE_ROW: Record<CareKind, { icon: 'apple' | 'ball' | 'soap'; verb: string }> = {
+  feed: { icon: 'apple', verb: 'Fed' },
+  play: { icon: 'ball', verb: 'Played' },
+  clean: { icon: 'soap', verb: 'Cleaned' },
+}
 
 interface Row {
+  key: string
   at: number
-  txHash: string
-  icon: React.ReactNode
-  text: React.ReactNode
+  txHash: string | null
+  icon: ReactNode
+  text: ReactNode
+}
+
+function capitalize(s: string): string {
+  return s.length ? s[0].toUpperCase() + s.slice(1) : s
 }
 
 export function HistoryPanel({ record, now }: { record: PetRecord; now: number }) {
   const rows: Row[] = [
-    ...record.care.map((c) => ({
-      at: c.at,
-      txHash: c.txHash,
-      icon: <span>{CARE_ICON[c.kind] ?? '✨'}</span>,
-      text: (
-        <>
-          <b>{c.kind}</b> by <AccountLink address={c.by} />
-        </>
-      ),
-    })),
-    ...record.gifts.map((g) => ({
-      at: g.at,
-      txHash: g.txHash,
-      icon: <TreatIcon kind={g.kind} size={3} />,
-      text: (
-        <>
-          <b>{g.kind}</b> treat ({g.amountXlm} XLM) from <AccountLink address={g.from} />
-        </>
-      ),
-    })),
+    ...record.care.map((c): Row => {
+      const meta = CARE_ROW[c.kind]
+      return {
+        key: `care-${c.txHash}-${c.at}`,
+        at: c.at,
+        txHash: c.txHash,
+        icon: <PixelIcon name={meta.icon} px={16} />,
+        text: (
+          <>
+            <b>{meta.verb}</b> by <AccountLink address={c.by} />
+          </>
+        ),
+      }
+    }),
+    ...record.gifts.map(
+      (g): Row => ({
+        key: `gift-${g.txHash}-${g.at}`,
+        at: g.at,
+        txHash: g.txHash,
+        icon: <TreatIcon kind={g.kind} size={2} />,
+        text: (
+          <>
+            <b>{capitalize(g.kind)} treat</b> ({Number(g.amountXlm)} XLM) from <AccountLink address={g.from} />
+          </>
+        ),
+      }),
+    ),
   ].sort((a, b) => b.at - a.at)
+  rows.push({
+    key: 'born',
+    at: record.bornAt,
+    txHash: null,
+    icon: <PixelIcon name="egg" px={16} />,
+    text: (
+      <>
+        <b>Born</b> on <AccountLink address={record.issuer} />
+      </>
+    ),
+  })
 
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="text-sm font-black uppercase tracking-wide text-stone-500">Lineage</h3>
-        <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-          {record.lineage.map((a, i) => (
-            <span key={a} className="flex items-center gap-1">
-              {i > 0 && <span className="text-stone-400">→</span>}
-              <span className="rounded-full border border-[#2b2140] bg-amber-50 px-2 py-0.5">
-                <AccountLink address={a} /> {i === 0 && <span className="text-stone-500">(birth)</span>}
-              </span>
+    <div>
+      <ol>
+        {rows.map((r, i) => (
+          <li
+            key={r.key}
+            className={`flex items-center gap-[9px] px-1 py-2.5 ${i === rows.length - 1 ? '' : 'border-b-2 border-dashed border-dash'}`}
+          >
+            <span aria-hidden className="flex w-4 shrink-0 items-center justify-center">
+              {r.icon}
             </span>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-sm font-black uppercase tracking-wide text-stone-500">Life log</h3>
-        <ul className="mt-1 divide-y divide-stone-200">
-          {rows.map((r) => (
-            <li key={r.txHash + String(r.at)} className="flex items-center gap-2 py-2 text-sm">
-              <span className="w-6 text-center">{r.icon}</span>
-              <span className="flex-1">{r.text}</span>
-              <span className="text-xs text-stone-500">{describeDuration(Math.max(0, now - r.at))} ago</span>
-              <TxLink hash={r.txHash} label="tx" />
-            </li>
-          ))}
-          <li className="flex items-center gap-2 py-2 text-sm">
-            <span className="w-6 text-center">🥚</span>
-            <span className="flex-1">
-              Born on <AccountLink address={record.issuer} />
+            <span className="min-w-0 flex-1 text-[13px] leading-snug text-ink">{r.text}</span>
+            <span className="shrink-0 text-[11px] text-muted-2">
+              {describeDuration(Math.max(0, now - r.at))}
+              <span className="hidden lg:inline"> ago</span>
             </span>
-            <span className="text-xs text-stone-500">{describeDuration(Math.max(0, now - record.bornAt))} ago</span>
+            {r.txHash && <TxLink hash={r.txHash} />}
           </li>
-        </ul>
-      </div>
-      <Why>Every row is a Stellar operation. Anyone can verify it on the explorer; nobody can edit or delete it.</Why>
+        ))}
+      </ol>
+      <p className="mt-1 px-1 text-[11px] leading-normal text-muted-2">
+        Every row is a Stellar operation — verifiable on the explorer, editable by no one.
+      </p>
+      {record.lineage.length > 1 && (
+        <p className="mt-1.5 px-1 text-[11px] leading-normal text-muted-2">
+          Owners:{' '}
+          {record.lineage.map((a, i) => (
+            <Fragment key={a}>
+              {i > 0 && <span aria-hidden> → </span>}
+              <AccountLink address={a} chars={4} />
+            </Fragment>
+          ))}
+        </p>
+      )}
     </div>
   )
 }

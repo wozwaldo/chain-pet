@@ -79,11 +79,11 @@ describe.skipIf(!E2E)('tx.ts on real testnet', () => {
   }, T)
 
   it('hatches the pet on A (the issuer)', async () => {
-    const { hash } = await submitOps(A, hatchOps('Pixel', 'blob'), signA)
+    const { hash } = await submitOps(A, hatchOps('Pixel', 'plain'), signA)
     expect(hash).toMatch(/^[0-9a-f]{64}$/)
     const acct = await server.loadAccount(A)
     expect(decodeDataValue(acct.data_attr[DATA_KEYS.name])).toBe('Pixel')
-    expect(decodeDataValue(acct.data_attr[DATA_KEYS.species])).toBe('blob')
+    expect(decodeDataValue(acct.data_attr[DATA_KEYS.species])).toBe('plain')
     // The bid is 2 ops x MAX_FEE_PER_OP; the network charges only the effective base fee, at most the bid.
     const tx = await server.transactions().transaction(hash).call()
     expect(String(tx.max_fee)).toBe(String(2 * Number(MAX_FEE_PER_OP)))

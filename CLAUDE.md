@@ -61,7 +61,8 @@ change in minutes. Default 1 (real time). Never affects on-chain data.
 - `src/pet/chain.ts` — read ops from Horizon into PetRecord (owner lookup, lineage walk).
 - `src/pet/engine.ts` — pure: PetRecord + now → PetState. Tested.
 - `src/anchor/` — SEP-24 flow, isolated behind AddFundsButton.
-- `src/components/` — PetSprite (SVG pixel art), StatBar, screens.
+- `src/art/` — cast + icon grids (data), PixelIcon.
+- `src/components/` — Device (the handheld), PetSprite, StatBar, ui primitives, screens.
 
 ## About me (the developer)
 - 5 years frontend (React/TS/Tailwind), strong UI/UX sense, 2D artist.
@@ -91,8 +92,14 @@ change in minutes. Default 1 (real time). Never affects on-chain data.
   anchor research) — but merge into the build order above. Agents own disjoint
   files; only the coordinator edits App.tsx and package.json.
 - Speed > polish. MVP scope only; propose extras, don't silently add them.
-- Visuals: use simple generated pixel/SVG placeholders with a consistent cute
-  style. Do NOT wait on hand-drawn art; I may replace assets later if time allows.
+- Visuals (decided 2026-09-20): the Claude Design "Cozy Garden" direction.
+  Tokens live in src/index.css (@theme) and src/components/ui.tsx; the pet
+  lives inside the Device component (src/components/Device.tsx, a port of the
+  design's Shell 'garden' era with meadow LCD + FEED/PLAY/CLEAN keys). Art is
+  the purchased 9-character cast in src/art/cast.ts (text grids, never retype)
+  plus UI icons in src/art/icons.ts. Design source zip:
+  ~/Downloads/"Chain Pet_ Blockchain Tamagotchi.zip" (README.md inside has
+  tokens + animation timings). Font: Outfit; mono only for addresses/numbers.
 - Brainstorming welcome ON TOP of this concept (how to make the pet more
   useful/interesting) — suggest, ask, then implement. Never change the
   non-negotiables.

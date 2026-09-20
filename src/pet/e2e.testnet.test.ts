@@ -110,7 +110,7 @@ describe.skipIf(!E2E)('Chain Pet core on real testnet (tx -> chain -> engine)', 
   }, T)
 
   it('1. A hatches Pixel the dragon: an egg owned by A with an empty history', async () => {
-    const { hash } = await submitOps(A, hatchOps('Pixel', 'dragon'), signA)
+    const { hash } = await submitOps(A, hatchOps('Pixel', 'dragonet'), signA)
     expect(hash).toMatch(/^[0-9a-f]{64}$/)
 
     const res = await eventually(() => loadPetByAccount(A), (r) => r !== null)
@@ -122,7 +122,7 @@ describe.skipIf(!E2E)('Chain Pet core on real testnet (tx -> chain -> engine)', 
       id: PET_ID,
       issuer: A,
       name: 'Pixel',
-      species: 'dragon',
+      species: 'dragonet',
       owner: A,
       lineage: [A],
       care: [],

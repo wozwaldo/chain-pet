@@ -1,8 +1,38 @@
 // Shared contract between chain reader (chain.ts), engine (engine.ts) and UI.
 // No enums: tsconfig has erasableSyntaxOnly. Use string unions.
 
-export const SPECIES = ['blob', 'cat', 'dragon'] as const
+/** The nine cast characters (src/art/cast.ts). Stored on-chain as the `pet.species` value. */
+export const SPECIES = ['bug', 'angel', 'dragonet', 'tanuki', 'elf', 'oni', 'plain', 'bee', 'cow'] as const
 export type Species = (typeof SPECIES)[number]
+
+export interface SpeciesMeta {
+  label: string
+  /** Floating pets hover and never touch the ground line; ground pets stand on it. */
+  kind: 'floating' | 'ground'
+  /** Idle micro-animation frame the art provides: wings/tail ('flap') or eyes ('blink'). */
+  idle: 'flap' | 'blink'
+}
+
+export const SPECIES_META: Record<Species, SpeciesMeta> = {
+  bug: { label: 'Fairy bug', kind: 'floating', idle: 'flap' },
+  angel: { label: 'Angel', kind: 'floating', idle: 'flap' },
+  dragonet: { label: 'Leaf drake', kind: 'floating', idle: 'flap' },
+  tanuki: { label: 'Tanuki', kind: 'ground', idle: 'flap' },
+  elf: { label: 'Elf', kind: 'ground', idle: 'flap' },
+  oni: { label: 'Oni', kind: 'ground', idle: 'flap' },
+  plain: { label: 'Kid', kind: 'ground', idle: 'blink' },
+  bee: { label: 'Bee', kind: 'ground', idle: 'blink' },
+  cow: { label: 'Cow', kind: 'ground', idle: 'blink' },
+}
+
+/** Pets hatched before the cast art existed used these names. */
+const LEGACY_SPECIES: Record<string, Species> = { blob: 'plain', cat: 'tanuki', dragon: 'dragonet' }
+
+/** Maps any on-chain `pet.species` value to a cast character. Unknown values become 'plain'. */
+export function normalizeSpecies(raw: string): Species {
+  if ((SPECIES as readonly string[]).includes(raw)) return raw as Species
+  return LEGACY_SPECIES[raw] ?? 'plain'
+}
 
 export const CARE_KINDS = ['feed', 'play', 'clean'] as const
 export type CareKind = (typeof CARE_KINDS)[number]

@@ -1,0 +1,497 @@
+/* Device (the handheld). Port of the design's Shell component, 'garden' era.
+   Every class is prefixed dv-; the palette lives in custom properties on
+   .dv-root so a night variant can override them later
+   (opt-in: add class dv-night, see below). Keyframes are the design's sh* / pp* curves renamed dv*. */
+
+.dv-root {
+  --dv-ink: #3a4030;
+  --dv-shell-a: #f2edd8;
+  --dv-shell-b: #ded6b8;
+  --dv-shell-shadow: 0 3px 0 rgba(58, 64, 48, 0.15), 0 16px 32px -18px rgba(58, 64, 48, 0.55);
+  --dv-bezel: #4a5a3a;
+  --dv-lcd: #a9d48e;
+  --dv-lcd-dot: #9ac47c;
+  --dv-screen-ink: #2e4d2b;
+  --dv-key: #f7f3e2;
+  --dv-key-ink: #3a4030;
+  --dv-keyshine: rgba(255, 255, 255, 0.65);
+  --dv-brand: #8f9678;
+  --dv-cell-a: #46599c;
+  --dv-cell-b: #243363;
+  --dv-urgent: #7f1a25; /* design #c73a45 was 3.0:1 on the LCD; this is 6.0:1 (5.1:1 on the dots) */
+  --dv-bubble: rgba(125, 185, 230, 0.95);
+  --dv-glare: 0.12;
+  --dv-mono: ui-monospace, Menlo, monospace;
+  position: relative;
+  width: 100%;
+  max-width: 376px;
+  margin: 0 auto;
+  perspective: 900px;
+  box-sizing: border-box;
+  color: var(--dv-ink);
+  touch-action: manipulation;
+}
+/* Night meadow: the design's garden dark tokens. Opt in with class dv-night on the root;
+   the ghost block below still wins for a dead pet. */
+.dv-root.dv-night {
+  --dv-ink: #161d12;
+  --dv-shell-a: #3b4433;
+  --dv-shell-b: #2e3628;
+  --dv-shell-shadow: 0 16px 32px -18px rgba(0, 0, 0, 0.6);
+  --dv-bezel: #222b1c;
+  --dv-lcd: #7ba368;
+  --dv-lcd-dot: #6d9459;
+  --dv-screen-ink: #22391f;
+  --dv-key: #4a5240;
+  --dv-key-ink: #eee9d4;
+  --dv-brand: #9aa284;
+  --dv-urgent: #ffd0d0;
+  --dv-glare: 0.08;
+}
+.dv-root.dv-ghost {
+  --dv-lcd: #dad7e5;
+  --dv-lcd-dot: #cac6d9;
+  --dv-screen-ink: #4a4468;
+}
+.dv-root * {
+  box-sizing: border-box;
+}
+
+/* Shell ------------------------------------------------------------------ */
+.dv-shell {
+  position: relative;
+  padding: 16px 16px 18px;
+  border: 2px solid var(--dv-ink);
+  border-radius: 30px;
+  background: linear-gradient(180deg, var(--dv-shell-a), var(--dv-shell-b));
+  box-shadow: var(--dv-shell-shadow);
+  transition: transform 0.16s ease-out;
+}
+
+/* Solar strip ------------------------------------------------------------ */
+.dv-solar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 4px 12px;
+}
+.dv-solar svg {
+  display: block;
+}
+.dv-brand {
+  font-family: var(--dv-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--dv-brand);
+}
+.dv-cells {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1.5px solid var(--dv-ink);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+}
+.dv-cells i {
+  display: block;
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, var(--dv-cell-a), var(--dv-cell-b));
+}
+
+/* Bezel + LCD ------------------------------------------------------------ */
+.dv-bezel {
+  border: 2px solid var(--dv-ink);
+  border-radius: 16px;
+  background: var(--dv-bezel);
+  padding: 10px;
+}
+.dv-lcd {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 12px 12px 9px;
+  background-color: var(--dv-lcd);
+  background-image: radial-gradient(var(--dv-lcd-dot) 24%, transparent 26%);
+  background-size: 5px 5px;
+  box-shadow: inset 0 2px 12px rgba(20, 12, 40, 0.28);
+  color: var(--dv-screen-ink);
+}
+.dv-glare {
+  position: absolute;
+  top: -40%;
+  left: -15%;
+  width: 60%;
+  height: 130%;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 62%);
+  transform: rotate(8deg);
+  opacity: var(--dv-glare);
+  pointer-events: none;
+}
+
+/* Meadow (behind everything else on the LCD) ---------------------------- */
+.dv-meadow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.dv-meadow svg {
+  display: block;
+}
+.dv-grass-r {
+  transform: scaleX(-1);
+}
+.dv-flower {
+  margin-bottom: 2px;
+}
+.dv-bfly {
+  position: absolute;
+  top: 26px;
+  right: 16px;
+  pointer-events: none;
+  animation: dvFlutter 9s ease-in-out infinite;
+}
+.dv-bfly svg {
+  display: block;
+}
+
+/* Header, pet column, moodline, ticker ---------------------------------- */
+.dv-head {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--dv-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.dv-head span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dv-pet-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 4px;
+}
+.dv-petbox {
+  position: relative;
+  z-index: 1;
+  height: 116px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.dv-petbox.dv-kind-floating {
+  /* Lift above the ground line. content-box keeps the 116px box intact
+     so the sprite does not climb into the header row. */
+  box-sizing: content-box;
+  padding-bottom: 12px;
+}
+.dv-walk,
+.dv-follow,
+.dv-anim {
+  display: block;
+}
+.dv-walk.dv-stroll {
+  animation: dvStroll 9s ease-in-out infinite;
+}
+.dv-follow {
+  transition: transform 0.55s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.dv-petwrap {
+  position: relative;
+  display: inline-block;
+}
+.dv-petwrap svg {
+  display: block;
+}
+.dv-anim {
+  transform-origin: 50% 100%;
+}
+.dv-i-bob {
+  animation: dvBob 2.2s ease-in-out infinite;
+}
+.dv-i-float {
+  animation: dvFloat 2.6s ease-in-out infinite;
+}
+.dv-i-egg {
+  animation: dvWob 3.8s ease-in-out infinite;
+}
+.dv-i-ghost {
+  animation: dvFloat 3.2s ease-in-out infinite;
+}
+.dv-i-droop {
+  animation: dvDroop 3.2s ease-in-out infinite;
+  opacity: 0.92;
+}
+.dv-a-still {
+  animation: none;
+}
+.dv-a-hop {
+  animation: dvHop 2.1s ease-in-out;
+}
+.dv-a-scrub {
+  animation: dvScrub 1.9s ease-in-out;
+}
+.dv-a-squash {
+  animation: dvSquash 0.45s ease-out;
+}
+.dv-a-reveal {
+  animation: dvReveal 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.dv-shadow {
+  width: 76px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 99px;
+  background: var(--dv-screen-ink);
+  opacity: 0.15;
+}
+.dv-line {
+  position: relative;
+  z-index: 2;
+  margin-top: 8px;
+  /* Sit above the meadow band (flower 26px + 2px + 8px inset) so the flower never crosses the text. */
+  margin-bottom: 30px;
+  min-height: 13px;
+  text-align: center;
+  /* LCD-coloured halo: keeps the line legible over the meadow flower. */
+  text-shadow: 0 0 3px var(--dv-lcd), 0 0 3px var(--dv-lcd), 0 0 6px var(--dv-lcd);
+  font-family: var(--dv-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* One line, always: a long string clips instead of growing the handheld. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dv-ticker {
+  position: relative;
+  text-shadow: 0 0 3px var(--dv-lcd), 0 0 3px var(--dv-lcd), 0 0 6px var(--dv-lcd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 6px;
+  padding-top: 7px;
+  border-top: 1.5px solid color-mix(in srgb, var(--dv-screen-ink) 25%, transparent);
+  font-family: var(--dv-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.dv-ticker span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dv-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: currentColor;
+}
+.dv-ticker.dv-urgent {
+  color: var(--dv-urgent);
+}
+.dv-ticker.dv-urgent .dv-dot {
+  animation: dvBlink 1s steps(1) infinite;
+}
+
+/* Action props: item, shards, hearts, bubbles ---------------------------- */
+.dv-item-food {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  margin-left: -16px;
+  animation: dvFood 1.05s ease-in-out forwards;
+  pointer-events: none;
+}
+.dv-item-ball {
+  position: absolute;
+  left: -26px;
+  bottom: 0;
+  animation: dvBall 2.1s ease-in-out forwards;
+  pointer-events: none;
+}
+.dv-shards {
+  position: absolute;
+  left: 50%;
+  bottom: 60px;
+  margin-left: -3px;
+  pointer-events: none;
+}
+.dv-shards i {
+  position: absolute;
+  display: block;
+  width: 5px;
+  height: 5px;
+  opacity: 0;
+}
+.dv-shards i:nth-child(1) { background: #e04f4f; animation: dvS1 0.5s ease-out 1s forwards; }
+.dv-shards i:nth-child(2) { background: #b63134; animation: dvS2 0.5s ease-out 1.06s forwards; }
+.dv-shards i:nth-child(3) { background: #e04f4f; width: 4px; height: 4px; animation: dvS3 0.5s ease-out 1.12s forwards; }
+.dv-shards i:nth-child(4) { background: #4fae6d; animation: dvS4 0.5s ease-out 1.03s forwards; }
+.dv-shards i:nth-child(5) { background: #ffffff; width: 4px; height: 4px; animation: dvS5 0.5s ease-out 1.09s forwards; }
+.dv-shards i:nth-child(6) { background: #b63134; width: 4px; height: 4px; animation: dvS6 0.5s ease-out 1.15s forwards; }
+.dv-hearts {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+.dv-hearts svg {
+  position: absolute;
+  opacity: 0;
+}
+.dv-hearts svg:nth-child(1) { left: 4px; top: 54px; animation: dvMini 0.8s ease-out 0.2s forwards; }
+.dv-hearts svg:nth-child(2) { right: 6px; top: 40px; animation: dvMini 0.8s ease-out 0.6s forwards; }
+.dv-hearts svg:nth-child(3) { left: 12px; top: 84px; animation: dvMini 0.8s ease-out 1s forwards; }
+.dv-hearts svg:nth-child(4) { right: 10px; top: 86px; animation: dvMini 0.8s ease-out 1.4s forwards; }
+.dv-hearts svg:nth-child(5) { left: 50%; top: 6px; margin-left: -6px; animation: dvMini 0.8s ease-out 1.7s forwards; }
+.dv-bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.dv-bubbles i {
+  position: absolute;
+  display: block;
+  border-radius: 99px;
+  border: 2px solid var(--dv-bubble);
+  background: rgba(255, 255, 255, 0.45);
+  animation: dvBubble 1.5s ease-in infinite;
+}
+.dv-bubbles i:nth-child(1) { left: 4%; bottom: 10px; width: 14px; height: 14px; opacity: 0.75; }
+.dv-bubbles i:nth-child(2) { left: 42%; bottom: 2px; width: 9px; height: 9px; opacity: 0.6; animation-delay: 0.35s; }
+.dv-bubbles i:nth-child(3) { left: 74%; bottom: 12px; width: 16px; height: 16px; opacity: 0.75; animation-delay: 0.7s; }
+.dv-bubbles i:nth-child(4) { left: 24%; bottom: 0; width: 7px; height: 7px; opacity: 0.5; animation-delay: 1.05s; }
+.dv-heartpop {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  margin-left: -13px;
+  animation: dvHeartPop 0.85s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Keys ------------------------------------------------------------------- */
+.dv-keys {
+  display: flex;
+  gap: 10px;
+  margin-top: 13px;
+}
+.dv-key {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px 8px;
+  border-radius: 999px;
+  border: 2px solid var(--dv-ink);
+  background: var(--dv-key);
+  box-shadow: 0 4px 0 var(--dv-ink);
+  color: var(--dv-key-ink);
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
+}
+.dv-key::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 14px;
+  right: 14px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--dv-keyshine);
+}
+.dv-key svg {
+  display: block;
+  position: relative;
+}
+.dv-key:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--dv-ink);
+}
+.dv-key:focus-visible {
+  outline: 2px solid var(--dv-ink);
+  outline-offset: 2px;
+}
+.dv-key:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.dv-keylabel {
+  font-family: var(--dv-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* Keyframes (design sh* / pp* curves) ------------------------------------ */
+@keyframes dvBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes dvFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes dvWob { 0%, 78%, 100% { transform: rotate(0deg); } 84% { transform: rotate(-5deg); } 90% { transform: rotate(5deg); } 96% { transform: rotate(-2deg); } }
+@keyframes dvDroop { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-4deg) translateY(-2px); } }
+@keyframes dvSquash { 0% { transform: scaleY(1); } 40% { transform: scaleY(0.82) translateY(6px); } 100% { transform: scaleY(1); } }
+@keyframes dvReveal { 0% { transform: scale(0.3) translateY(10px); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+@keyframes dvBlink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.2; } }
+@keyframes dvStroll { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(13px); } 65% { transform: translateX(-13px); } }
+@keyframes dvHop { 0%, 100% { transform: translateY(0); } 18% { transform: translateY(-26px); } 38% { transform: translateY(0); } 54% { transform: translateY(0); } 66% { transform: translateY(-17px); } 82% { transform: translateY(0); } }
+@keyframes dvScrub { 0%, 100% { transform: rotate(0deg); } 15% { transform: rotate(-8deg) translateX(-3px); } 30% { transform: rotate(8deg) translateX(3px); } 45% { transform: rotate(-8deg) translateX(-3px); } 60% { transform: rotate(8deg) translateX(3px); } 78% { transform: rotate(-5deg); } }
+@keyframes dvFood { 0% { transform: translate(0, -52px); opacity: 0; } 34% { transform: translate(0, 2px); opacity: 1; } 44% { transform: translate(0, -3px); } 54% { transform: translate(0, 0); } 82% { transform: translate(0, -38px) scale(0.8); opacity: 1; } 100% { transform: translate(0, -44px) scale(0.45); opacity: 0; } }
+@keyframes dvBall { 0% { transform: translate(0, 0); opacity: 1; } 16% { transform: translate(22px, -52px); } 34% { transform: translate(48px, 0); } 50% { transform: translate(70px, -30px); } 66% { transform: translate(90px, 0); } 80% { transform: translate(102px, -14px); } 93% { transform: translate(110px, 0); opacity: 1; } 100% { transform: translate(114px, 0); opacity: 0; } }
+@keyframes dvHeartPop { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 25% { transform: translateY(-10px) scale(1.15); opacity: 1; } 100% { transform: translateY(-34px) scale(1); opacity: 0; } }
+@keyframes dvBubble { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(-92px); opacity: 0; } }
+@keyframes dvS1 { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(-16px, -9px); opacity: 0; } }
+@keyframes dvS2 { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(15px, -13px); opacity: 0; } }
+@keyframes dvS3 { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(-11px, 9px); opacity: 0; } }
+@keyframes dvS4 { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(13px, 10px); opacity: 0; } }
+@keyframes dvS5 { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(-4px, -19px); opacity: 0; } }
+@keyframes dvS6 { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(9px, -3px); opacity: 0; } }
+@keyframes dvMini { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 30% { transform: translateY(-6px) scale(1); opacity: 1; } 100% { transform: translateY(-20px) scale(0.9); opacity: 0; } }
+@keyframes dvFlutter { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(-28px, 12px); } 60% { transform: translate(-46px, -4px); } 80% { transform: translate(-16px, 8px); } }
+
+/* Reduced motion: no stroll, no tilt, no cursor follow (JS also skips those);
+   frame swaps and action sequences stay because they carry state changes. */
+@media (prefers-reduced-motion: reduce) {
+  .dv-shell {
+    transition: none;
+    transform: none !important;
+  }
+  .dv-walk.dv-stroll,
+  .dv-bfly,
+  .dv-i-bob,
+  .dv-i-float,
+  .dv-i-egg,
+  .dv-i-ghost,
+  .dv-i-droop {
+    animation: none;
+  }
+  .dv-follow {
+    transition: none;
+    transform: none !important;
+  }
+}

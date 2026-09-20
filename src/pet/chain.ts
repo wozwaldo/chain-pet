@@ -6,7 +6,7 @@ import { Asset, Horizon, StrKey } from '@stellar/stellar-sdk'
 import { DATA_KEYS, PET_ASSET_CODE, TREAT_MEMO_PREFIX } from '../stellar/config'
 import { decodeDataValue, loadAccountOrNull, server } from '../stellar/horizon'
 import type { AccountRecord } from '../stellar/horizon'
-import { CARE_KINDS, SPECIES } from './types'
+import { CARE_KINDS, normalizeSpecies } from './types'
 import type { CareEvent, CareKind, GiftEvent, PendingTransfer, PetRecord, Species } from './types'
 
 type CollectionPage<T extends Horizon.HorizonApi.BaseResponse> = Horizon.ServerApi.CollectionPage<T>
@@ -59,7 +59,7 @@ function toMs(iso: string): number {
 }
 
 function toSpecies(raw: string): Species {
-  return (SPECIES as readonly string[]).includes(raw) ? (raw as Species) : 'blob'
+  return normalizeSpecies(raw)
 }
 
 function isCareKind(raw: string): raw is CareKind {

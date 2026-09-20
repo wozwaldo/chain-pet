@@ -1,1 +1,169 @@
 @import "tailwindcss";
+
+/*
+ * Cozy Garden tokens (design handoff, section 6a). Every value here is a
+ * Tailwind v4 theme variable, so the screens compose with plain utilities:
+ * bg-garden, text-ink, bg-card, border-line, bg-primary, bg-tabs, bg-tab-active,
+ * text-link, bg-track, bg-fill, bg-low, bg-chip-amber / text-chip-amber-ink,
+ * shadow-card, rounded-card, font-sans, font-mono ...
+ */
+@theme {
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  /* surfaces */
+  --color-garden: #ebe6cf; /* page background under the dot texture */
+  --color-header: #f7f3e2; /* top bar, also the ink on an active tab */
+  --color-card: #f9f6e8;
+  --color-field: #ffffff; /* inputs, secondary buttons, stepper keys */
+  --color-field-soft: #fffdf4; /* stepper keys on desktop */
+  --color-grass: #dce6bf; /* footer band */
+  --color-pending: #efe9d2; /* pending heir row, neutral chip */
+  --color-pending-border: #cfc8a8;
+  --color-info: #e9f0dd; /* sage tint: info cards, Testnet pill */
+  --color-info-border: #cfdcc0;
+  --color-testnet: #3b5c44; /* text-testnet; bg-testnet = the same sage tint */
+  --color-testnet-bg: #e9f0dd;
+
+  /* ink */
+  --color-ink: #3a4030;
+  --color-muted: #5c6647;
+  --color-muted-2: #646950; /* design 6a #75795c (4.2:1 on card); darkened for AA: 5.3 card, 4.6 garden, 4.7 pending */
+  --color-footer: #4f5840;
+  --color-placeholder: #9a9d80;
+  --color-link: #3f6a35;
+  --color-danger: #8f4021;
+  --color-alert: #a85a3b; /* white text on it = 5.0:1; the wrong-network banner + failed step badge (the design has no text on --color-low) */
+
+  /* lines */
+  --color-line: rgba(58, 64, 48, 0.15); /* card + header hairlines */
+  --color-line-soft: rgba(58, 64, 48, 0.16); /* treat tile idle border */
+  --color-line-mid: rgba(58, 64, 48, 0.2);
+  --color-line-strong: rgba(58, 64, 48, 0.3); /* 1.5px input / secondary button border */
+  --color-dash: #d5cea9; /* dashed history separators */
+
+  /* actions */
+  --color-primary: #4c7842; /* design #55854a is 4.3:1 with white; 5.2:1 here */
+  --color-primary-hover: #43693a;
+  --color-amber-from: #e6bb63;
+  --color-amber-to: #d9a94e;
+  --color-amber-ink: #3d2f10;
+  --gradient-amber: linear-gradient(180deg, #e6bb63, #d9a94e);
+
+  /* tabs (pill container + active segment) */
+  --color-tabs: #e7e1c6;
+  --color-tab: #e7e1c6;
+  --color-tab-active: #4c7842; /* design #5d8a4f is 3.6:1 with the active ink; 4.6:1 here */
+  --color-tab-active-ink: #f7f3e2;
+
+  /* stat bars */
+  --color-track: #e3dcc0;
+  --color-fill: #6fae52;
+  --color-low: #c4704d;
+
+  /* chips */
+  --color-chip-amber: #f2e6c2;
+  --color-chip-amber-ink: #6b4d16;
+  --color-chip-terra: #f4ddcf;
+  --color-chip-terra-ink: #8f4021;
+  --color-chip-green: #e9f0dd;
+  --color-chip-green-ink: #3b5c44;
+  --color-chip-neutral: #efe9d2;
+  --color-chip-neutral-ink: #5c6647;
+  --color-txchip: #e7efd6; /* tx ↗ pill, text-link on top */
+  --color-txchip-hover: #dbe7c7;
+
+  /* treat tiles */
+  --color-treat-active: #e7f0d5;
+  --color-treat-active-border: #5d8a4f;
+
+  /* radii + shadows */
+  --radius-card: 16px;
+  --shadow-card: 0 12px 26px -20px rgba(58, 64, 48, 0.55);
+  --shadow-screen: 0 16px 36px -24px rgba(58, 64, 48, 0.55);
+  --shadow-cta: 0 8px 18px -10px rgba(58, 64, 48, 0.6);
+  --shadow-amber: 0 6px 14px -8px rgba(120, 90, 30, 0.6);
+  --shadow-tab: 0 4px 10px -4px rgba(58, 64, 48, 0.5);
+
+  /* motion */
+  --ease-leaf: cubic-bezier(0.3, 1.3, 0.55, 1);
+  --animate-leaf-in: cpLeafIn 0.42s cubic-bezier(0.3, 1.3, 0.55, 1) both;
+  --animate-up: cpUp 0.5s cubic-bezier(0.3, 1.3, 0.55, 1) both;
+  --animate-sway: cpSway 4s ease-in-out infinite;
+  --animate-drift: cpDrift 9s ease-in-out infinite;
+  --animate-glow: cpGlow 1.6s ease-in-out infinite;
+}
+
+/* Keyframes live outside @theme so they are always emitted, including for
+ * inline `style={{ animation }}` uses that Tailwind cannot see. */
+@keyframes cpUp {
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes cpLeafIn {
+  0% { opacity: 0; transform: translateY(8px) rotate(-1.2deg) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+}
+@keyframes cpSway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.6deg); }
+}
+@keyframes cpDrift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(7px, -9px); }
+  55% { transform: translate(-5px, -16px); }
+  80% { transform: translate(5px, -6px); }
+}
+@keyframes cpGlow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.9; }
+}
+
+@layer base {
+  html,
+  body {
+    background-color: #ebe6cf;
+    background-image: radial-gradient(rgba(90, 100, 60, 0.11) 22%, transparent 24%);
+    background-size: 10px 10px;
+    color: #3a4030;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    min-height: 100dvh;
+  }
+  /* Pixel art must never blur when scaled. */
+  canvas,
+  img.pixel,
+  svg.pixel {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Tab panels grow in like a leaf (matches `animation:cpLeafIn .42s ...` in 6a). */
+@utility leaf-in {
+  animation: cpLeafIn 0.42s cubic-bezier(0.3, 1.3, 0.55, 1) both;
+}
+
+/* Soft breathing chip for urgent countdowns (Starves in ..., Dies if ignored ...). */
+@utility pulse-chip {
+  animation: cpChipPulse 1.8s ease-in-out infinite;
+}
+@keyframes cpChipPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 112, 77, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(196, 112, 77, 0.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf-in,
+  .pulse-chip,
+  .animate-leaf-in,
+  .animate-up,
+  .animate-sway,
+  .animate-drift,
+  .animate-glow {
+    animation: none;
+  }
+}

@@ -1,4 +1,4 @@
-// Generates public/favicon.svg and public/icons/*.png from the sprite grids.
+// Generates public/favicon.svg (transparent) and public/icons/*.png (on the LCD green) from the tanuki cast grid.
 // Run: MAKE_ICONS=1 pnpm exec vitest run src/dev/makeIcons.test.ts
 import { describe, expect, it } from 'vitest'
 import { composeSprite, spriteSvg, type ComposedSprite } from '../components/spriteGrid'
@@ -67,19 +67,22 @@ function paint(sprite: ComposedSprite, px: number, padFrac: number, bg: string):
   const rgba = new Uint8Array(px * px * 4)
   const [br, bgc, bb] = hexToRgb(bg)
   for (let i = 0; i < px * px; i++) rgba.set([br, bgc, bb, 255], i * 4)
-  const cols = sprite.rows[0]?.length ?? 1
+  // Non-square grids: integer cell from the larger dimension, centred both ways.
+  const cols = sprite.rows.reduce((m, r) => Math.max(m, r.length), 1)
+  const rowsN = Math.max(1, sprite.rows.length)
   const inner = px * (1 - padFrac * 2)
-  const cell = Math.floor(inner / cols)
-  const off = Math.floor((px - cell * cols) / 2)
+  const cell = Math.max(1, Math.floor(inner / Math.max(cols, rowsN)))
+  const ox = Math.floor((px - cell * cols) / 2)
+  const oy = Math.floor((px - cell * rowsN) / 2)
   sprite.rows.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const ch = row[x]
       if (isTransparent(ch)) continue
       const [r, g, b] = hexToRgb(sprite.palette[ch] ?? '#ff00ff')
       for (let yy = 0; yy < cell; yy++) {
-        const py = off + y * cell + yy
+        const py = oy + y * cell + yy
         for (let xx = 0; xx < cell; xx++) {
-          const pxi = off + x * cell + xx
+          const pxi = ox + x * cell + xx
           rgba.set([r, g, b, 255], (py * px + pxi) * 4)
         }
       }
@@ -92,11 +95,11 @@ describe.skipIf(!env.MAKE_ICONS)('make icons', () => {
   it('writes favicon.svg and PNG app icons', async () => {
     // @ts-expect-error tsconfig.app.json has no node types; vitest runs this in Node.
     const { writeFileSync } = await import('node:fs')
-    const sprite = composeSprite('cat', 'adult', 'happy', true)
+    const sprite = composeSprite('tanuki', 'adult', 'happy', true)
     const svg = spriteSvg(sprite)
     expect(svg).toContain('<svg')
     writeFileSync('public/favicon.svg', svg + '\n')
-    const bg = '#fef3c7'
+    const bg = '#a9d48e' // the device's LCD green
     writeFileSync('public/icons/icon-192.png', await encodePng(192, 192, paint(sprite, 192, 0.08, bg)))
     writeFileSync('public/icons/icon-512.png', await encodePng(512, 512, paint(sprite, 512, 0.08, bg)))
     writeFileSync('public/icons/icon-512-maskable.png', await encodePng(512, 512, paint(sprite, 512, 0.2, bg)))

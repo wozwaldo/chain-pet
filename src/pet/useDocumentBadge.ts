@@ -31,14 +31,18 @@ function pngDataUrl(sprite: ComposedSprite, px: number): string | null {
     canvas.height = px
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
-    const cols = sprite.rows[0]?.length ?? 1
-    const cell = px / cols
+    // Non-square grids (the cast is e.g. 21x27): integer cell, centred in the square.
+    const cols = sprite.rows.reduce((m, r) => Math.max(m, r.length), 1)
+    const rowsN = Math.max(1, sprite.rows.length)
+    const cell = Math.max(1, Math.floor(px / Math.max(cols, rowsN)))
+    const ox = Math.floor((px - cell * cols) / 2)
+    const oy = Math.floor((px - cell * rowsN) / 2)
     sprite.rows.forEach((row, y) => {
       for (let x = 0; x < row.length; x++) {
         const ch = row[x]
         if (isTransparent(ch)) continue
         ctx.fillStyle = sprite.palette[ch] ?? '#ff00ff'
-        ctx.fillRect(Math.round(x * cell), Math.round(y * cell), Math.ceil(cell), Math.ceil(cell))
+        ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell)
       }
     })
     return canvas.toDataURL('image/png')

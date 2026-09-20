@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- this file intentionally exports data/helpers next to its component; editing it triggers a full HMR reload instead of a fast refresh */
 // Data-driven pixel art. A "grid" is an array of equal-length strings; each
 // character is a palette key, and ' ' or '.' is transparent. Artists edit the
-// grids (see PetSprite.tsx / TreatIcon.tsx), never this renderer.
+// grids (see src/art/cast.ts and src/art/icons.ts), never this renderer.
 import type { CSSProperties, ReactNode } from 'react'
 
 export type Grid = string[]
@@ -123,8 +123,12 @@ export function PixelRects({ rows, palette, x = 0, y = 0, className }: PixelRect
 export interface PixelArtProps {
   rows: Grid
   palette: Palette
-  /** Screen pixels per grid cell. */
+  /** Screen pixels per grid cell. Ignored when `height` or `width` is set. */
   size?: number
+  /** Rendered height in CSS px; the width follows the grid aspect unless `width` is set too. */
+  height?: number
+  /** Rendered width in CSS px; the height follows the grid aspect unless `height` is set too. */
+  width?: number
   className?: string
   /** Accessible name. Without it the image is aria-hidden (decorative). */
   title?: string
@@ -133,14 +137,29 @@ export interface PixelArtProps {
   children?: ReactNode
 }
 
-/** Inline SVG: viewBox = cols x rows, rendered at cols*size by rows*size px. */
-export function PixelArt({ rows, palette, size = 8, className, title, style, children }: PixelArtProps) {
+/** CSS px box for a cols x rows grid: explicit height / width win, else `size` px per cell. Keeps the aspect. */
+export function pixelBox(
+  cols: number,
+  rows: number,
+  size: number,
+  width?: number,
+  height?: number,
+): { width: number; height: number } {
+  if (width !== undefined && height !== undefined) return { width, height }
+  if (height !== undefined) return { width: Math.round(rows > 0 ? (height * cols) / rows : 0), height }
+  if (width !== undefined) return { width, height: Math.round(cols > 0 ? (width * rows) / cols : 0) }
+  return { width: cols * size, height: rows * size }
+}
+
+/** Inline SVG: viewBox = cols x rows, rendered at cols*size by rows*size px, or at the given height / width. */
+export function PixelArt({ rows, palette, size = 8, height, width, className, title, style, children }: PixelArtProps) {
   const { cols, rows: h } = gridSize(rows)
+  const box = pixelBox(cols, h, size, width, height)
   return (
     <svg
       viewBox={`0 0 ${cols} ${h}`}
-      width={cols * size}
-      height={h * size}
+      width={box.width}
+      height={box.height}
       shapeRendering="crispEdges"
       role={title ? 'img' : undefined}
       aria-label={title}

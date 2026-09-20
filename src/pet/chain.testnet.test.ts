@@ -69,7 +69,7 @@ describe.skipIf(!process.env.TESTNET_E2E)('chain.ts on real testnet', () => {
     await submit(A, (tb) =>
       tb
         .addOperation(Operation.manageData({ name: DATA_KEYS.name, value: 'Mochi' }))
-        .addOperation(Operation.manageData({ name: DATA_KEYS.species, value: 'cat' })),
+        .addOperation(Operation.manageData({ name: DATA_KEYS.species, value: 'tanuki' })),
     )
     // A feeds.
     await submit(A, (tb) => tb.addOperation(Operation.manageData({ name: DATA_KEYS.care, value: 'feed' })))
@@ -117,7 +117,7 @@ describe.skipIf(!process.env.TESTNET_E2E)('chain.ts on real testnet', () => {
       expect(r.id).toBe(`${PET_ASSET_CODE}:${A.publicKey()}`)
       expect(r.issuer).toBe(A.publicKey())
       expect(r.name).toBe('Mochi')
-      expect(r.species).toBe('cat')
+      expect(r.species).toBe('tanuki')
       expect(r.owner).toBe(B.publicKey())
       expect(r.lineage).toEqual([A.publicKey(), B.publicKey()])
       expect(r.care.map((c) => c.kind)).toEqual(['feed', 'play'])
@@ -225,7 +225,7 @@ describe.skipIf(!process.env.TESTNET_E2E)('chain.ts paging on a busy account', (
     await submit(D, (tb) =>
       tb
         .addOperation(Operation.manageData({ name: DATA_KEYS.name, value: 'Busy' }))
-        .addOperation(Operation.manageData({ name: DATA_KEYS.species, value: 'dragon' })),
+        .addOperation(Operation.manageData({ name: DATA_KEYS.species, value: 'dragonet' })),
     )
     // Why: re-setting the same key overwrites the entry (one subentry) but every op stays in the log.
     for (let t = 0; t < CARE_TXS; t++) {

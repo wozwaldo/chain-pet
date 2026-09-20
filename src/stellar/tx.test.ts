@@ -26,11 +26,11 @@ describe('tx.ts offline validation', () => {
   const H = Keypair.random().publicKey()
 
   it('hatchOps validates name and species', () => {
-    expect(hatchOps('Pixel', 'cat')).toHaveLength(2)
-    expect(() => hatchOps('', 'cat')).toThrow(/1 to 24/)
-    expect(() => hatchOps('x'.repeat(25), 'cat')).toThrow(/1 to 24/)
+    expect(hatchOps('Pixel', 'tanuki')).toHaveLength(2)
+    expect(() => hatchOps('', 'tanuki')).toThrow(/1 to 24/)
+    expect(() => hatchOps('x'.repeat(25), 'tanuki')).toThrow(/1 to 24/)
     // 24 chars but > 64 bytes of UTF-8 (each emoji is 4 bytes)
-    expect(() => hatchOps('🐉'.repeat(20), 'dragon')).toThrow(/64 bytes/)
+    expect(() => hatchOps('🐉'.repeat(20), 'dragonet')).toThrow(/64 bytes/)
     expect(() => hatchOps('Pixel', 'unicorn' as never)).toThrow(/species/)
   })
 
@@ -125,7 +125,7 @@ describe('tx.ts build/submit with Horizon mocked', () => {
   it('buildTx bids MAX_FEE_PER_OP per operation, sets the memo and timebounds', async () => {
     mockLoadAccount()
     const before = Math.floor(Date.now() / 1000)
-    const tx = await buildTx(G, hatchOps('Pixel', 'cat'), { memo: giftMemo('apple') })
+    const tx = await buildTx(G, hatchOps('Pixel', 'tanuki'), { memo: giftMemo('apple') })
     expect(MAX_FEE_PER_OP).toBe('1000')
     expect(tx.fee).toBe(String(2 * Number(MAX_FEE_PER_OP)))
     expect(tx.operations).toHaveLength(2)
